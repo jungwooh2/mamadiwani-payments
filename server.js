@@ -6,22 +6,27 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-app.post('/payments', (req, res) => {
-  const { amount, customerId, method } = req.body;
+app.post("/payments", async (req, res) => {
+  const { amount, customerId, method, token } = req.body;
 
-  if (!amount || !customerId || !method) {
-    return res.status(400).json({ error: 'Missing required fields' });
+  try {
+    const charge = await stripe.charges.create({
+      amount: amount * 100,
+      currency: "usd",
+      source: token,
+      description: `Safari booking for ${customerId}`
+    });
+
+    res.json({
+      message: "✅ Real payment confirmed",
+      transactionId: charge.id,
+      amount,
+      method,
+      customerId
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const transactionId = 'TXN-' + Date.now();
-  res.status(200).json({
-    message: 'Deposit confirmed',
-    transactionId,
-    amount,
-    method,
-    customerId
-  });
 });
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Payments backend running on port ${PORT}`));
